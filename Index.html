@@ -1,0 +1,1165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="RanchAssist Stocking Rate Calculator — estimate supported head count, grazing days, acres required, animal units, forage demand, and AUM equivalents.">
+  <title>Stocking Rate Calculator | RanchAssist</title>
+  <style>
+    :root{
+      --ra-black:#0A0A09;--ra-white:#FFFFFF;--ra-canvas:#F7F7F4;--ra-surface:#FFFFFF;--ra-soft:#F1F1ED;
+      --ra-text:#171715;--ra-text-2:#666660;--ra-text-3:#81817A;--ra-border:#DEDED8;--ra-border-strong:#C5C5BD;
+      --ra-green:#4C6752;--ra-green-soft:#E7EEE8;--ra-warning:#A16C32;--ra-warning-soft:#F4ECE1;
+      --ra-danger:#B44845;--ra-danger-soft:#F5E6E5;--ra-info:#536C80;
+      --radius-sm:6px;--radius-md:8px;--radius-lg:12px;--radius-xl:16px;
+      --shadow:0 1px 2px rgba(10,10,9,.04),0 8px 24px rgba(10,10,9,.06);
+      --font:"Geist","Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    }
+    *{box-sizing:border-box}
+    html{color-scheme:light}
+    body{margin:0;background:var(--ra-canvas);color:var(--ra-text);font-family:var(--font);font-size:15px;line-height:1.5}
+    button,input,select,textarea{font:inherit;color:inherit}
+    button{cursor:pointer}
+    :focus-visible{outline:2px solid var(--ra-black);outline-offset:2px}
+    .app{min-height:100vh}
+    .topbar{position:sticky;top:0;z-index:20;background:rgba(247,247,244,.96);backdrop-filter:blur(10px);border-bottom:1px solid var(--ra-border)}
+    .topbar-inner{max-width:1360px;margin:0 auto;padding:12px 32px;display:flex;gap:20px;align-items:center;justify-content:space-between}
+    .brandline{display:flex;align-items:center;min-width:0;gap:10px}
+    .brand{font-weight:750;letter-spacing:.055em;font-size:15px;white-space:nowrap}
+    .slash{color:var(--ra-border-strong)}
+    .tool-mini{color:var(--ra-text-2);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .top-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+    .btn{height:42px;border-radius:7px;padding:0 14px;border:1px solid var(--ra-border-strong);background:var(--ra-white);display:inline-flex;align-items:center;justify-content:center;gap:8px;font-weight:650;font-size:13px;white-space:nowrap}
+    .btn:hover{background:var(--ra-soft)}
+    .btn.primary{background:var(--ra-black);border-color:var(--ra-black);color:#fff}
+    .btn.primary:hover{background:#242422}
+    .btn.danger{color:var(--ra-danger);border-color:#d9aaa8;background:#fff}
+    .btn.tertiary{height:auto;border:0;background:transparent;padding:4px 0;color:var(--ra-text);font-weight:650}
+    .btn.small{height:36px;padding:0 11px;font-size:12px}
+    .btn:disabled{opacity:.45;cursor:not-allowed}
+    .container{max-width:1360px;margin:0 auto;padding:34px 32px 64px}
+    .hero{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:24px;align-items:end;padding-bottom:28px;border-bottom:1px solid var(--ra-border)}
+    .eyebrow{font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--ra-text-2);font-weight:750;margin-bottom:7px}
+    h1{font-size:clamp(32px,4vw,48px);line-height:1.02;letter-spacing:-.035em;margin:0 0 10px;font-weight:680}
+    .lede{max-width:760px;font-size:17px;color:var(--ra-text-2);margin:0}
+    .project-meta{display:grid;grid-template-columns:1fr;gap:8px;min-width:260px}
+    .project-meta label{font-size:12px;font-weight:700;color:var(--ra-text-2)}
+    .project-meta input{width:100%;height:42px;border:1px solid var(--ra-border-strong);border-radius:7px;background:#fff;padding:0 12px}
+    .statusline{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ra-text-2)}
+    .dot{width:7px;height:7px;border-radius:50%;background:var(--ra-warning)}
+    .dot.saved{background:var(--ra-green)}
+    .notice{margin:18px 0 24px;background:#fff;border:1px solid var(--ra-border);border-radius:10px;padding:12px 14px;display:flex;gap:10px;align-items:flex-start;color:var(--ra-text-2);font-size:13px}
+    .notice strong{color:var(--ra-text)}
+    .layout{display:grid;grid-template-columns:minmax(0,1.03fr) minmax(390px,.97fr);gap:24px;align-items:start}
+    .panel{background:#fff;border:1px solid var(--ra-border);border-radius:12px}
+    .panel-head{padding:18px 20px;border-bottom:1px solid var(--ra-border);display:flex;align-items:center;justify-content:space-between;gap:16px}
+    .panel-head h2{margin:0;font-size:18px;letter-spacing:-.015em}
+    .panel-body{padding:20px}
+    .scenario-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px}
+    .scenario-btn{min-height:58px;border:1px solid var(--ra-border);border-radius:8px;background:#fff;text-align:left;padding:9px 11px}
+    .scenario-btn strong{display:block;font-size:13px}
+    .scenario-btn span{display:block;font-size:11px;color:var(--ra-text-2);margin-top:2px}
+    .scenario-btn.active{border-color:var(--ra-black);box-shadow:0 0 0 1px var(--ra-black) inset}
+    .step{border-top:1px solid var(--ra-border);padding:20px 0}
+    .step:first-of-type{border-top:0;padding-top:0}
+    .step-heading{display:flex;gap:12px;align-items:flex-start;margin-bottom:15px}
+    .step-no{width:28px;height:28px;border-radius:50%;background:var(--ra-black);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:750;flex:0 0 auto}
+    .step-heading h3{margin:1px 0 2px;font-size:17px}
+    .step-heading p{margin:0;color:var(--ra-text-2);font-size:12px}
+    .grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+    .grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+    .field{min-width:0}
+    .field label{display:flex;justify-content:space-between;gap:8px;align-items:baseline;font-size:13px;font-weight:650;color:#353532;margin-bottom:7px}
+    .tag{font-size:10px;font-weight:750;letter-spacing:.06em;text-transform:uppercase;color:var(--ra-warning);background:var(--ra-warning-soft);padding:2px 6px;border-radius:999px}
+    .optional{font-size:11px;color:var(--ra-text-3);font-weight:500}
+    .inputwrap{display:flex}
+    .inputwrap input,.inputwrap select,.field>input,.field>select,.field>textarea{width:100%;height:44px;border:1px solid #CFCFC8;border-radius:7px;background:#fff;padding:0 11px;min-width:0}
+    .field>textarea{height:84px;padding:10px 11px;resize:vertical}
+    .inputwrap input{border-radius:7px 0 0 7px}
+    .unit{height:44px;min-width:64px;padding:0 10px;border:1px solid #CFCFC8;border-left:0;border-radius:0 7px 7px 0;background:var(--ra-soft);display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--ra-text-2);font-weight:650}
+    .helper{font-size:11.5px;color:var(--ra-text-2);margin:5px 0 0;line-height:1.4}
+    .seg{display:grid;grid-template-columns:repeat(2,1fr);background:var(--ra-soft);padding:3px;border-radius:8px;gap:3px}
+    .seg button{min-height:38px;border:0;background:transparent;border-radius:6px;font-size:12px;font-weight:650}
+    .seg button.active{background:#fff;box-shadow:0 1px 2px rgba(10,10,9,.08)}
+    .mode-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+    .mode-btn{min-height:66px;text-align:left;border:1px solid var(--ra-border);border-radius:8px;background:#fff;padding:10px}
+    .mode-btn strong{display:block;font-size:13px}
+    .mode-btn span{display:block;font-size:11px;color:var(--ra-text-2);margin-top:2px}
+    .mode-btn.active{border-color:var(--ra-black);box-shadow:0 0 0 1px var(--ra-black) inset}
+    details.advanced{border-top:1px solid var(--ra-border);padding-top:16px;margin-top:2px}
+    details summary{cursor:pointer;font-weight:700;font-size:13px;list-style:none;display:flex;justify-content:space-between}
+    details summary::-webkit-details-marker{display:none}
+    details summary:after{content:"+"}
+    details[open] summary:after{content:"−"}
+    .advanced-content{padding-top:14px}
+    .rightcol{display:grid;gap:16px}
+    .results{background:var(--ra-black);color:#fff;border-color:var(--ra-black);overflow:hidden}
+    .results .panel-head{border-color:#343430}
+    .results .panel-head h2{color:#fff}
+    .primary-answer{padding:22px 20px 18px;border-bottom:1px solid #343430}
+    .primary-answer .kicker{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#A4A49C;font-weight:750}
+    .primary-answer .value{font-size:clamp(40px,6vw,60px);line-height:1;font-weight:700;letter-spacing:-.04em;font-variant-numeric:tabular-nums;margin:7px 0 5px}
+    .primary-answer .context{font-size:13px;color:#C8C8C0}
+    .metrics{display:grid;grid-template-columns:repeat(2,1fr);border-bottom:1px solid #343430}
+    .metric{padding:15px 20px;border-right:1px solid #343430;border-top:1px solid #343430;min-width:0}
+    .metric:nth-child(even){border-right:0}
+    .metric:nth-child(-n+2){border-top:0}
+    .metric label{display:block;color:#A4A49C;font-size:10px;font-weight:750;letter-spacing:.07em;text-transform:uppercase}
+    .metric strong{display:block;font-size:24px;letter-spacing:-.025em;font-variant-numeric:tabular-nums;margin-top:4px;overflow-wrap:anywhere}
+    .metric small{display:block;color:#A4A49C;font-size:11px;margin-top:2px}
+    .viz{padding:18px 20px}
+    .viz-title{display:flex;justify-content:space-between;gap:10px;align-items:center;font-size:12px;color:#C8C8C0;margin-bottom:9px}
+    .bar{height:10px;background:#2a2a28;border-radius:999px;overflow:hidden;position:relative}
+    .bar>span{display:block;height:100%;background:#E7EEE8;width:0;transition:width .18s ease}
+    .viz-foot{display:flex;justify-content:space-between;gap:10px;margin-top:8px;font-size:11px;color:#A4A49C}
+    .capacity{display:grid;grid-template-columns:112px 1fr;gap:18px;align-items:center;margin-top:18px}
+    .gauge{width:112px;height:112px;border-radius:50%;background:conic-gradient(#E7EEE8 var(--pct,0%),#2a2a28 0);position:relative}
+    .gauge:after{content:"";position:absolute;inset:12px;background:var(--ra-black);border-radius:50%}
+    .gauge-inner{position:absolute;inset:0;z-index:2;display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center}
+    .gauge-inner strong{font-size:22px}
+    .gauge-inner span{font-size:10px;color:#A4A49C}
+    .capacity-copy strong{display:block;font-size:15px;margin-bottom:3px}
+    .capacity-copy p{margin:0;color:#A4A49C;font-size:12px}
+    .warningbox{margin:0 20px 20px;padding:11px 12px;border-radius:8px;border:1px solid #55432f;background:#211b14;color:#e9d9c6;font-size:12px;display:none}
+    .warningbox.show{display:block}
+    .light-card{background:#fff;border:1px solid var(--ra-border);border-radius:12px;padding:18px 20px}
+    .light-card h3{font-size:16px;margin:0 0 12px}
+    .breakdown{display:grid;gap:0}
+    .row{display:grid;grid-template-columns:1fr auto;gap:16px;padding:10px 0;border-top:1px solid var(--ra-border);font-size:13px}
+    .row:first-child{border-top:0;padding-top:0}
+    .row span{color:var(--ra-text-2)}
+    .row strong{text-align:right;font-variant-numeric:tabular-nums}
+    .compare-wrap{overflow-x:auto}
+    table{border-collapse:collapse;width:100%;font-size:12px;min-width:700px}
+    th{background:var(--ra-soft);text-align:left;padding:10px 11px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;border-bottom:1px solid var(--ra-border);white-space:nowrap}
+    td{padding:10px 11px;border-bottom:1px solid var(--ra-border);vertical-align:top}
+    td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+    .calc-details .formula{padding:12px 0;border-top:1px solid var(--ra-border)}
+    .calc-details .formula:first-child{border-top:0;padding-top:0}
+    .formula strong{font-size:12px;display:block}
+    .formula code{display:block;margin-top:4px;background:var(--ra-soft);padding:8px 10px;border-radius:6px;font:12px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:normal}
+    .formula p{font-size:11.5px;color:var(--ra-text-2);margin:5px 0 0}
+    .footer-note{margin-top:24px;padding-top:20px;border-top:1px solid var(--ra-border);color:var(--ra-text-2);font-size:12px;display:flex;gap:18px;justify-content:space-between;flex-wrap:wrap}
+    .toast{position:fixed;right:20px;bottom:20px;z-index:60;max-width:min(380px,calc(100vw - 40px));background:var(--ra-black);color:#fff;padding:12px 14px;border-radius:8px;box-shadow:var(--shadow);font-size:13px;display:none}
+    .toast.show{display:block}
+    .modal-backdrop{position:fixed;inset:0;background:rgba(10,10,9,.45);z-index:50;display:none;align-items:center;justify-content:center;padding:20px}
+    .modal-backdrop.show{display:flex}
+    .modal{width:min(520px,100%);background:#fff;border:1px solid var(--ra-border);border-radius:12px;box-shadow:var(--shadow);overflow:hidden}
+    .modal-head{padding:16px 18px;border-bottom:1px solid var(--ra-border);display:flex;justify-content:space-between;align-items:center}
+    .modal-head h3{margin:0;font-size:17px}
+    .modal-body{padding:18px}
+    .modal-actions{padding:14px 18px;border-top:1px solid var(--ra-border);display:flex;justify-content:flex-end;gap:8px}
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+    .mobile-actions{display:none}
+    .hidden{display:none!important}
+
+    @media(max-width:1023px){
+      .topbar-inner,.container{padding-left:24px;padding-right:24px}
+      .layout{grid-template-columns:1fr}
+      .rightcol{grid-template-columns:1fr 1fr}
+      .results{grid-column:1/-1}
+      .hero{grid-template-columns:1fr}
+      .project-meta{min-width:0;max-width:420px}
+    }
+    @media(max-width:767px){
+      body{font-size:14px}
+      .topbar-inner{padding:10px 16px}
+      .top-actions{display:none}
+      .brand{font-size:13px}.tool-mini{font-size:12px}
+      .container{padding:22px 16px 96px}
+      .hero{padding-bottom:20px;gap:18px}
+      h1{font-size:34px}
+      .lede{font-size:15px}
+      .notice{margin-top:14px}
+      .layout{gap:14px}
+      .panel-head,.panel-body{padding-left:16px;padding-right:16px}
+      .grid2,.grid3{grid-template-columns:1fr}
+      .scenario-strip{grid-template-columns:1fr}
+      .scenario-btn{min-height:52px}
+      .mode-grid{grid-template-columns:1fr}
+      .rightcol{grid-template-columns:1fr}
+      .metrics{grid-template-columns:1fr 1fr}
+      .metric{padding:14px 16px}
+      .primary-answer{padding:18px 16px}
+      .viz{padding:16px}
+      .warningbox{margin:0 16px 16px}
+      .capacity{grid-template-columns:92px 1fr}
+      .gauge{width:92px;height:92px}
+      .mobile-actions{display:grid;grid-template-columns:repeat(4,1fr);position:fixed;bottom:0;left:0;right:0;z-index:30;background:rgba(247,247,244,.97);border-top:1px solid var(--ra-border);padding:8px 8px max(8px,env(safe-area-inset-bottom));gap:6px}
+      .mobile-actions button{min-height:48px;border:1px solid var(--ra-border);background:#fff;border-radius:7px;font-size:11px;font-weight:700}
+    }
+    @media print{
+      .topbar,.mobile-actions,.notice,.scenario-strip,.panel.inputs-panel,.footer-note,.toast,.modal-backdrop{display:none!important}
+      body{background:#fff}
+      .container{max-width:none;padding:0}
+      .hero{display:block;border-bottom:2px solid #000;padding:0 0 16px;margin-bottom:18px}
+      .hero .project-meta{margin-top:12px}
+      .layout{display:block}
+      .rightcol{display:block}
+      .panel,.light-card{break-inside:avoid;border-color:#aaa;margin-bottom:16px}
+      .results{background:#fff!important;color:#000!important;border:1px solid #aaa}
+      .results *{color:#000!important}
+      .bar{border:1px solid #aaa;background:#eee}
+      .bar>span{background:#777}
+      .gauge{display:none}
+      .warningbox{background:#fff;color:#000;border-color:#aaa}
+      .compare-wrap{overflow:visible}
+      table{min-width:0;font-size:10px}
+    }
+    @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+  </style>
+</head>
+<body>
+<div class="app" id="app">
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brandline" aria-label="RanchAssist Stocking Rate Calculator">
+        <span class="brand">RANCHASSIST™</span><span class="slash">/</span><span class="tool-mini">Stocking Rate Calculator</span>
+      </div>
+      <div class="top-actions">
+        <button class="btn small" type="button" id="openProjectBtn">Open Project</button>
+        <button class="btn small" type="button" id="saveProjectBtn">Save Project</button>
+        <button class="btn small" type="button" id="duplicateProjectBtn">Duplicate</button>
+        <button class="btn small" type="button" id="exportCsvBtn">Export CSV</button>
+        <button class="btn small" type="button" id="printBtn">PDF / Print</button>
+        <button class="btn small" type="button" id="shareBtn">Share</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="hero">
+      <div>
+        <div class="eyebrow">Livestock · Grazing</div>
+        <h1>Stocking Rate Calculator</h1>
+        <p class="lede">Estimate supported head count, grazing days, acres required, animal units, forage demand, and AUM equivalents from your own forage and herd assumptions.</p>
+      </div>
+      <div class="project-meta">
+        <label for="projectName">Project name <span class="optional">Optional</span></label>
+        <input id="projectName" type="text" maxlength="100" placeholder="Stocking Rate Plan">
+        <div class="statusline" aria-live="polite"><span class="dot" id="saveDot"></span><span id="saveStatus">Unsaved</span></div>
+      </div>
+    </section>
+
+    <div class="notice">
+      <span aria-hidden="true">ⓘ</span>
+      <div><strong>Session only.</strong> RanchAssist does not permanently store this project. Save a RanchAssist <strong>.ra</strong> project file to continue your work later, or export your results before leaving.</div>
+    </div>
+
+    <div class="layout">
+      <section class="panel inputs-panel" aria-labelledby="inputsTitle">
+        <div class="panel-head">
+          <h2 id="inputsTitle">Planning inputs</h2>
+          <button class="btn small danger" id="clearBtn" type="button">Clear Session</button>
+        </div>
+        <div class="panel-body">
+          <div class="scenario-strip" id="scenarioStrip" aria-label="Scenario selector"></div>
+
+          <section class="step">
+            <div class="step-heading">
+              <span class="step-no">1</span>
+              <div><h3>Land</h3><p>Define the usable grazing area and planning duration.</p></div>
+            </div>
+            <div class="grid2">
+              <div class="field">
+                <label for="pastureName">Pasture name <span class="optional">Optional</span></label>
+                <input id="pastureName" type="text" maxlength="80" placeholder="North Pasture">
+              </div>
+              <div class="field">
+                <label for="acres">Usable grazing acres</label>
+                <div class="inputwrap"><input id="acres" type="number" inputmode="decimal" min="0" step="0.1"><span class="unit">acres</span></div>
+              </div>
+              <div class="field">
+                <label for="durationValue">Grazing period</label>
+                <div class="inputwrap"><input id="durationValue" type="number" inputmode="decimal" min="0" step="0.1"><span class="unit" id="durationUnitLabel">days</span></div>
+              </div>
+              <div class="field">
+                <label>Duration unit</label>
+                <div class="seg" id="durationSeg">
+                  <button type="button" data-duration-unit="days">Days</button>
+                  <button type="button" data-duration-unit="months">Months</button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="step">
+            <div class="step-heading">
+              <span class="step-no">2</span>
+              <div><h3>Forage</h3><p>Enter dry-matter production and the portion you want available to livestock.</p></div>
+            </div>
+            <div class="grid2">
+              <div class="field">
+                <label for="forageProduction">Forage production <span class="tag">Assumption</span></label>
+                <div class="inputwrap"><input id="forageProduction" type="number" inputmode="decimal" min="0" step="1"><span class="unit" id="forageUnitLabel">lb DM/ac</span></div>
+                <p class="helper">Estimated dry matter produced per acre for the planning period.</p>
+              </div>
+              <div class="field">
+                <label>Production unit</label>
+                <div class="seg" id="forageSeg">
+                  <button type="button" data-forage-unit="lb">lb DM/ac</button>
+                  <button type="button" data-forage-unit="tons">tons/ac</button>
+                </div>
+              </div>
+              <div class="field">
+                <label for="utilization">Utilization <span class="tag">Assumption</span></label>
+                <div class="inputwrap"><input id="utilization" type="number" inputmode="decimal" min="0" max="100" step="1"><span class="unit">%</span></div>
+                <p class="helper">Share of standing forage you intend to make available for grazing before other adjustments.</p>
+              </div>
+              <div class="field">
+                <label for="harvestEfficiency">Harvest efficiency <span class="tag">Assumption</span></label>
+                <div class="inputwrap"><input id="harvestEfficiency" type="number" inputmode="decimal" min="0" max="100" step="1"><span class="unit">%</span></div>
+                <p class="helper">Share of the allocated forage expected to be consumed rather than lost to trampling, fouling, or selectivity.</p>
+              </div>
+              <div class="field">
+                <label for="reserve">Residual / reserve <span class="tag">Assumption</span></label>
+                <div class="inputwrap"><input id="reserve" type="number" inputmode="decimal" min="0" max="100" step="1"><span class="unit">%</span></div>
+                <p class="helper">Additional forage you choose to protect after utilization and harvest-efficiency adjustments.</p>
+              </div>
+              <div class="field">
+                <label for="droughtBuffer">Drought buffer <span class="tag">Assumption</span></label>
+                <div class="inputwrap"><input id="droughtBuffer" type="number" inputmode="decimal" min="0" max="100" step="1"><span class="unit">%</span></div>
+                <p class="helper">Extra planning reduction for dry conditions or uncertainty.</p>
+              </div>
+            </div>
+          </section>
+
+          <section class="step">
+            <div class="step-heading">
+              <span class="step-no">3</span>
+              <div><h3>Livestock</h3><p>Set livestock class, average weight, intake rate, and herd size.</p></div>
+            </div>
+            <div class="grid2">
+              <div class="field">
+                <label for="livestockClass">Livestock class</label>
+                <select id="livestockClass">
+                  <option>Mature Cow</option>
+                  <option>Cow-Calf Pair</option>
+                  <option>Replacement Heifer</option>
+                  <option>Stocker/Feeder</option>
+                  <option>Bull</option>
+                  <option>Custom</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="headCount">Current / planned herd</label>
+                <div class="inputwrap"><input id="headCount" type="number" inputmode="numeric" min="0" step="1"><span class="unit">head</span></div>
+                <p class="helper">Used for grazing-days, acres-required, demand, AU, and AUM results.</p>
+              </div>
+              <div class="field">
+                <label for="avgWeight">Average live weight <span class="tag">Assumption</span></label>
+                <div class="inputwrap"><input id="avgWeight" type="number" inputmode="decimal" min="0" step="10"><span class="unit">lb</span></div>
+              </div>
+              <div class="field">
+                <label for="dmiPct">Daily DM intake <span class="tag">Assumption</span></label>
+                <div class="inputwrap"><input id="dmiPct" type="number" inputmode="decimal" min="0" max="10" step="0.1"><span class="unit">% BW</span></div>
+                <p class="helper">Dry matter intake as a percent of average live weight per day.</p>
+              </div>
+              <div class="field">
+                <label for="auOverride">Animal-unit equivalent <span class="optional">Optional override</span></label>
+                <input id="auOverride" type="number" inputmode="decimal" min="0" step="0.01" placeholder="Auto from live weight">
+                <p class="helper">If blank, AU equivalent = average weight ÷ base AU weight.</p>
+              </div>
+            </div>
+          </section>
+
+          <section class="step">
+            <div class="step-heading">
+              <span class="step-no">4</span>
+              <div><h3>Question mode</h3><p>Choose which answer should be emphasized. All supporting metrics remain visible.</p></div>
+            </div>
+            <div class="mode-grid" id="modeGrid">
+              <button type="button" class="mode-btn" data-mode="head"><strong>How many head can I stock?</strong><span>Capacity for the selected acres and duration.</span></button>
+              <button type="button" class="mode-btn" data-mode="days"><strong>How many grazing days?</strong><span>Estimated days for the entered herd.</span></button>
+              <button type="button" class="mode-btn" data-mode="acres"><strong>How many acres do I need?</strong><span>Area needed for the entered herd and duration.</span></button>
+              <button type="button" class="mode-btn" data-mode="compare"><strong>Compare scenarios</strong><span>Review all three user-defined cases side by side.</span></button>
+            </div>
+          </section>
+
+          <details class="advanced">
+            <summary>Advanced settings</summary>
+            <div class="advanced-content grid2">
+              <div class="field">
+                <label for="baseAuWeight">Base AU weight <span class="tag">Assumption</span></label>
+                <div class="inputwrap"><input id="baseAuWeight" type="number" inputmode="decimal" min="1" step="10"><span class="unit">lb</span></div>
+                <p class="helper">Used only to calculate automatic animal-unit equivalents.</p>
+              </div>
+              <div class="field">
+                <label for="aumDays">Days per AUM <span class="tag">Assumption</span></label>
+                <div class="inputwrap"><input id="aumDays" type="number" inputmode="decimal" min="1" step="0.1"><span class="unit">days</span></div>
+                <p class="helper">Used for time-based AUM equivalents: AU × grazing days ÷ days/AUM.</p>
+              </div>
+              <div class="field" style="grid-column:1/-1">
+                <label for="notes">Planning notes <span class="optional">Optional</span></label>
+                <textarea id="notes" maxlength="3000" placeholder="Forage test source, pasture condition, date sampled, rainfall context, local guidance, or other notes…"></textarea>
+              </div>
+            </div>
+          </details>
+          <div id="validation" role="alert" class="helper" style="color:var(--ra-danger);margin-top:14px"></div>
+        </div>
+      </section>
+
+      <aside class="rightcol">
+        <section class="panel results" aria-labelledby="resultsTitle">
+          <div class="panel-head"><h2 id="resultsTitle">Live results</h2><span id="scenarioBadge" style="font-size:11px;color:#A4A49C"></span></div>
+          <div class="primary-answer">
+            <div class="kicker" id="primaryLabel">Planning head count</div>
+            <div class="value" id="primaryValue">—</div>
+            <div class="context" id="primaryContext">Enter your assumptions to calculate.</div>
+          </div>
+          <div class="metrics">
+            <div class="metric"><label>Grazing days</label><strong id="metricDays">—</strong><small>for entered herd</small></div>
+            <div class="metric"><label>Acres required</label><strong id="metricAcres">—</strong><small>for entered herd + duration</small></div>
+            <div class="metric"><label>Available forage</label><strong id="metricForage">—</strong><small>lb dry matter</small></div>
+            <div class="metric"><label>Daily herd demand</label><strong id="metricDemand">—</strong><small>lb DM / day</small></div>
+            <div class="metric"><label>Animal units</label><strong id="metricAU">—</strong><small>entered herd</small></div>
+            <div class="metric"><label>AUM equivalent</label><strong id="metricAUM">—</strong><small>entered herd × duration</small></div>
+          </div>
+          <div class="viz">
+            <div class="viz-title"><span>Supply vs. planned demand</span><strong id="supplyDemandText">—</strong></div>
+            <div class="bar" aria-hidden="true"><span id="demandBar"></span></div>
+            <div class="viz-foot"><span id="supplyLabel">Supply —</span><span id="demandLabel">Demand —</span></div>
+            <div class="capacity">
+              <div class="gauge" id="capacityGauge" style="--pct:0%">
+                <div class="gauge-inner"><strong id="gaugePct">—</strong><span>capacity used</span></div>
+              </div>
+              <div class="capacity-copy">
+                <strong id="capacityStatus">Waiting for inputs</strong>
+                <p id="capacityText">Capacity compares entered-herd forage demand with calculated available forage.</p>
+              </div>
+            </div>
+          </div>
+          <div class="warningbox" id="warningBox"></div>
+        </section>
+
+        <section class="light-card">
+          <h3>Forage & demand breakdown</h3>
+          <div class="breakdown">
+            <div class="row"><span>Total forage produced</span><strong id="bProduced">—</strong></div>
+            <div class="row"><span>Available per acre</span><strong id="bAvailablePerAcre">—</strong></div>
+            <div class="row"><span>Protected / unavailable forage</span><strong id="bReserve">—</strong></div>
+            <div class="row"><span>Daily demand / head</span><strong id="bDemandHead">—</strong></div>
+            <div class="row"><span>Total demand for duration</span><strong id="bDurationDemand">—</strong></div>
+            <div class="row"><span>Acres / head for duration</span><strong id="bAcresHead">—</strong></div>
+          </div>
+        </section>
+
+        <section class="light-card" id="compareCard">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px">
+            <h3 style="margin:0">Scenario comparison</h3>
+            <button class="btn small" id="copyScenarioBtn" type="button">Copy active to next</button>
+          </div>
+          <div class="compare-wrap">
+            <table aria-label="Scenario comparison">
+              <thead><tr>
+                <th>Scenario</th><th class="num">Acres</th><th class="num">Forage/ac</th><th class="num">Util.</th>
+                <th class="num">Herd</th><th class="num">Days</th><th class="num">Supported head</th><th class="num">Acres needed</th>
+              </tr></thead>
+              <tbody id="compareBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="light-card calc-details">
+          <details>
+            <summary style="font-size:15px">View Calculation Details</summary>
+            <div style="padding-top:14px" id="calcDetails"></div>
+          </details>
+        </section>
+      </aside>
+    </div>
+
+    <div class="footer-note">
+      <span><strong>Planning estimate only.</strong> Actual stocking decisions depend on local forage conditions, season, soils, rainfall, animal class, management, and professional/local guidance.</span>
+      <span>RanchAssist™ · Stocking Rate Calculator v1.0.0</span>
+    </div>
+  </main>
+
+  <nav class="mobile-actions" aria-label="Project and export actions">
+    <button type="button" id="mobileProjectBtn">Save .ra</button>
+    <button type="button" id="mobileOpenBtn">Open .ra</button>
+    <button type="button" id="mobileExportBtn">CSV</button>
+    <button type="button" id="mobileShareBtn">Share</button>
+  </nav>
+
+  <input class="sr-only" id="fileInput" type="file" accept=".ra,application/json,application/x-ranchassist-project">
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <div class="modal-backdrop" id="shareModal" role="dialog" aria-modal="true" aria-labelledby="shareTitle">
+    <div class="modal">
+      <div class="modal-head"><h3 id="shareTitle">Share summary</h3><button class="btn small" id="closeShareBtn" type="button" aria-label="Close share dialog">Close</button></div>
+      <div class="modal-body">
+        <div class="grid2">
+          <div class="field" style="grid-column:1/-1">
+            <label for="shareEmail">Email address</label>
+            <input id="shareEmail" type="email" inputmode="email" autocomplete="email" placeholder="name@example.com">
+          </div>
+          <div class="field" style="grid-column:1/-1">
+            <label for="shareNote">Message <span class="optional">Optional</span></label>
+            <textarea id="shareNote" maxlength="5000" placeholder="Add a short note…"></textarea>
+          </div>
+        </div>
+        <p class="helper" id="shareHelp">On Apps Script, RanchAssist sends the summary with MailApp. In the standalone HTML version, your device email app is used instead.</p>
+      </div>
+      <div class="modal-actions">
+        <button class="btn" id="copySummaryBtn" type="button">Copy Summary</button>
+        <button class="btn primary" id="sendEmailBtn" type="button">Send Email</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  const TOOL = { id:'stocking-rate-calculator', name:'Stocking Rate Calculator', version:'1.0.0', formatVersion:'1.0' };
+  const SESSION_KEY = 'ranchassist.stocking-rate-calculator.active';
+  const MONTH_DAYS_DEFAULT = 30.4;
+  const scenarioNames = ['Base','Conservative','Aggressive'];
+  const presets = {
+    'Mature Cow': {weight:1200,dmi:2.5},
+    'Cow-Calf Pair': {weight:1400,dmi:2.6},
+    'Replacement Heifer': {weight:850,dmi:2.5},
+    'Stocker/Feeder': {weight:650,dmi:2.7},
+    'Bull': {weight:1800,dmi:2.3},
+    'Custom': {weight:1000,dmi:2.5}
+  };
+
+  const $ = (id) => document.getElementById(id);
+  const clamp = (n,min,max) => Math.min(max,Math.max(min,n));
+  const num = (v,fallback=0) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : fallback;
+  };
+  const cleanPositive = (v,fallback=0) => Math.max(0,num(v,fallback));
+  const cleanPercent = (v,fallback=0) => clamp(num(v,fallback),0,100);
+  const fmt = (n,d=1) => Number.isFinite(n) ? n.toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d}) : '—';
+  const fmt0 = (n) => Number.isFinite(n) ? Math.round(n).toLocaleString() : '—';
+  const nowIso = () => new Date().toISOString();
+  const uuid = () => (crypto && crypto.randomUUID) ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0,v=c==='x'?r:(r&3|8);return v.toString(16);});
+  const escapeText = (s) => String(s == null ? '' : s);
+
+  function defaultScenario(name,index){
+    const adjustments = [
+      {acres:100,forage:2500,util:50,harvest:80,reserve:10,drought:10,head:50,weight:1200,dmi:2.5,duration:90},
+      {acres:100,forage:2100,util:45,harvest:75,reserve:15,drought:15,head:50,weight:1200,dmi:2.5,duration:90},
+      {acres:100,forage:2900,util:55,harvest:85,reserve:8,drought:5,head:50,weight:1200,dmi:2.5,duration:90}
+    ][index];
+    return {
+      name, pastureName:'',
+      acres:adjustments.acres,
+      durationValue:adjustments.duration,durationUnit:'days',
+      forageProduction:adjustments.forage,forageUnit:'lb',
+      utilization:adjustments.util,harvestEfficiency:adjustments.harvest,reserve:adjustments.reserve,droughtBuffer:adjustments.drought,
+      livestockClass:'Mature Cow',headCount:adjustments.head,avgWeight:adjustments.weight,dmiPct:adjustments.dmi,auOverride:'',
+      baseAuWeight:1000,aumDays:30.4,notes:''
+    };
+  }
+
+  function freshState(){
+    const created = nowIso();
+    return {
+      project:{id:uuid(),name:'Stocking Rate Plan',createdAt:created,updatedAt:created},
+      activeScenario:0,
+      questionMode:'head',
+      scenarios:scenarioNames.map(defaultScenario),
+      lastSavedHash:null
+    };
+  }
+
+  let state = freshState();
+  let lastRenderedHash = '';
+  let toastTimer = null;
+
+  const fields = [
+    'pastureName','acres','durationValue','forageProduction','utilization','harvestEfficiency','reserve','droughtBuffer',
+    'livestockClass','headCount','avgWeight','dmiPct','auOverride','baseAuWeight','aumDays','notes'
+  ];
+
+  function scenario(){ return state.scenarios[state.activeScenario]; }
+
+  function normalizeScenario(s){
+    const base = defaultScenario(s && s.name ? s.name : 'Scenario',0);
+    const x = Object.assign(base, s || {});
+    x.name = escapeText(x.name || 'Scenario').slice(0,40);
+    x.pastureName = escapeText(x.pastureName).slice(0,80);
+    x.acres = cleanPositive(x.acres);
+    x.durationValue = cleanPositive(x.durationValue);
+    x.durationUnit = x.durationUnit === 'months' ? 'months' : 'days';
+    x.forageProduction = cleanPositive(x.forageProduction);
+    x.forageUnit = x.forageUnit === 'tons' ? 'tons' : 'lb';
+    x.utilization = cleanPercent(x.utilization);
+    x.harvestEfficiency = cleanPercent(x.harvestEfficiency);
+    x.reserve = cleanPercent(x.reserve);
+    x.droughtBuffer = cleanPercent(x.droughtBuffer);
+    x.livestockClass = presets[x.livestockClass] ? x.livestockClass : 'Custom';
+    x.headCount = Math.max(0,Math.round(cleanPositive(x.headCount)));
+    x.avgWeight = cleanPositive(x.avgWeight);
+    x.dmiPct = clamp(num(x.dmiPct,0),0,10);
+    x.auOverride = x.auOverride === '' || x.auOverride == null ? '' : cleanPositive(x.auOverride);
+    x.baseAuWeight = Math.max(1,cleanPositive(x.baseAuWeight,1000));
+    x.aumDays = Math.max(1,cleanPositive(x.aumDays,30.4));
+    x.notes = escapeText(x.notes).slice(0,3000);
+    return x;
+  }
+
+  function durationDays(s){
+    return s.durationUnit === 'months' ? s.durationValue * (s.aumDays || MONTH_DAYS_DEFAULT) : s.durationValue;
+  }
+
+  function forageLbPerAcre(s){
+    return s.forageUnit === 'tons' ? s.forageProduction * 2000 : s.forageProduction;
+  }
+
+  function calculate(s){
+    s = normalizeScenario(s);
+    const days = durationDays(s);
+    const foragePerAcre = forageLbPerAcre(s);
+    const totalProduced = s.acres * foragePerAcre;
+    const allocationFactor = s.utilization / 100;
+    const harvestFactor = s.harvestEfficiency / 100;
+    const reserveFactor = 1 - s.reserve / 100;
+    const droughtFactor = 1 - s.droughtBuffer / 100;
+    const effectiveFactor = allocationFactor * harvestFactor * reserveFactor * droughtFactor;
+    const availablePerAcre = foragePerAcre * effectiveFactor;
+    const availableForage = totalProduced * effectiveFactor;
+    const protectedForage = Math.max(0,totalProduced - availableForage);
+    const dailyDemandHead = s.avgWeight * (s.dmiPct / 100);
+    const herdDailyDemand = dailyDemandHead * s.headCount;
+    const totalDemand = herdDailyDemand * days;
+    const supportedHeadExact = (dailyDemandHead > 0 && days > 0) ? availableForage / (dailyDemandHead * days) : 0;
+    const supportedHead = Math.max(0,Math.floor(supportedHeadExact + 1e-9));
+    const grazingDays = herdDailyDemand > 0 ? availableForage / herdDailyDemand : 0;
+    const acresRequired = availablePerAcre > 0 ? totalDemand / availablePerAcre : 0;
+    const acresPerHead = s.headCount > 0 ? acresRequired / s.headCount : (availablePerAcre > 0 ? dailyDemandHead * days / availablePerAcre : 0);
+    const auEquivalent = s.auOverride === '' ? (s.baseAuWeight > 0 ? s.avgWeight / s.baseAuWeight : 0) : cleanPositive(s.auOverride);
+    const totalAU = auEquivalent * s.headCount;
+    const totalAUM = s.aumDays > 0 ? totalAU * days / s.aumDays : 0;
+    const demandRatio = availableForage > 0 ? totalDemand / availableForage : (totalDemand > 0 ? Infinity : 0);
+    const capacityPct = Number.isFinite(demandRatio) ? demandRatio * 100 : 999;
+    return {
+      s,days,foragePerAcre,totalProduced,effectiveFactor,availablePerAcre,availableForage,protectedForage,
+      dailyDemandHead,herdDailyDemand,totalDemand,supportedHeadExact,supportedHead,grazingDays,acresRequired,acresPerHead,
+      auEquivalent,totalAU,totalAUM,demandRatio,capacityPct
+    };
+  }
+
+  function getValidation(r){
+    const errs = [];
+    if (r.s.acres <= 0) errs.push('Usable grazing acres must be greater than 0.');
+    if (r.days <= 0) errs.push('Grazing period must be greater than 0.');
+    if (r.foragePerAcre <= 0) errs.push('Forage production must be greater than 0.');
+    if (r.s.utilization <= 0) errs.push('Utilization must be greater than 0%.');
+    if (r.s.harvestEfficiency <= 0) errs.push('Harvest efficiency must be greater than 0%.');
+    if (r.s.reserve >= 100 || r.s.droughtBuffer >= 100) errs.push('Reserve and drought buffer must each be less than 100% to leave forage available.');
+    if (r.s.avgWeight <= 0) errs.push('Average live weight must be greater than 0 lb.');
+    if (r.s.dmiPct <= 0) errs.push('Daily dry matter intake must be greater than 0% of body weight.');
+    if ((state.questionMode === 'days' || state.questionMode === 'acres' || state.questionMode === 'compare') && r.s.headCount <= 0) errs.push('Enter a herd head count greater than 0 for this question mode.');
+    return errs;
+  }
+
+  function syncInputsFromState(){
+    const s = scenario();
+    $('projectName').value = state.project.name || '';
+    fields.forEach(id => {
+      if ($(id)) $(id).value = s[id] == null ? '' : s[id];
+    });
+    $('durationUnitLabel').textContent = s.durationUnit;
+    $('forageUnitLabel').textContent = s.forageUnit === 'tons' ? 'tons/ac' : 'lb DM/ac';
+    document.querySelectorAll('[data-duration-unit]').forEach(b=>b.classList.toggle('active',b.dataset.durationUnit===s.durationUnit));
+    document.querySelectorAll('[data-forage-unit]').forEach(b=>b.classList.toggle('active',b.dataset.forageUnit===s.forageUnit));
+    document.querySelectorAll('[data-mode]').forEach(b=>b.classList.toggle('active',b.dataset.mode===state.questionMode));
+    renderScenarioStrip();
+  }
+
+  function collectInputs(){
+    const s = scenario();
+    s.pastureName = $('pastureName').value.trim();
+    s.acres = cleanPositive($('acres').value);
+    s.durationValue = cleanPositive($('durationValue').value);
+    s.forageProduction = cleanPositive($('forageProduction').value);
+    s.utilization = cleanPercent($('utilization').value);
+    s.harvestEfficiency = cleanPercent($('harvestEfficiency').value);
+    s.reserve = cleanPercent($('reserve').value);
+    s.droughtBuffer = cleanPercent($('droughtBuffer').value);
+    s.livestockClass = $('livestockClass').value;
+    s.headCount = Math.max(0,Math.round(cleanPositive($('headCount').value)));
+    s.avgWeight = cleanPositive($('avgWeight').value);
+    s.dmiPct = clamp(num($('dmiPct').value),0,10);
+    s.auOverride = $('auOverride').value.trim()==='' ? '' : cleanPositive($('auOverride').value);
+    s.baseAuWeight = Math.max(1,cleanPositive($('baseAuWeight').value,1000));
+    s.aumDays = Math.max(1,cleanPositive($('aumDays').value,30.4));
+    s.notes = $('notes').value;
+    state.project.name = ($('projectName').value.trim() || 'Stocking Rate Plan').slice(0,100);
+    state.scenarios[state.activeScenario] = normalizeScenario(s);
+  }
+
+  function renderScenarioStrip(){
+    const host = $('scenarioStrip');
+    host.innerHTML = '';
+    state.scenarios.forEach((s,i)=>{
+      const b = document.createElement('button');
+      b.type='button'; b.className='scenario-btn'+(i===state.activeScenario?' active':'');
+      const r = calculate(s);
+      b.innerHTML='<strong>'+escapeHtml(s.name)+'</strong><span>'+fmt0(r.supportedHead)+' head · '+fmt(r.grazingDays,0)+' days</span>';
+      b.addEventListener('click',()=>{ collectInputs(); state.activeScenario=i; syncInputsFromState(); recalc(true); });
+      host.appendChild(b);
+    });
+  }
+
+  function renderResults(){
+    const r = calculate(scenario());
+    const errs = getValidation(r);
+    $('validation').textContent = errs.join(' ');
+    $('scenarioBadge').textContent = r.s.name + ' scenario';
+
+    let primaryLabel='Planning head count', primaryValue=fmt0(r.supportedHead), context='for '+fmt(r.days,1)+' days on '+fmt(r.s.acres,1)+' usable acres';
+    if(state.questionMode==='days'){
+      primaryLabel='Estimated grazing days'; primaryValue=fmt(r.grazingDays,1); context='for '+fmt0(r.s.headCount)+' head on '+fmt(r.s.acres,1)+' usable acres';
+    }else if(state.questionMode==='acres'){
+      primaryLabel='Estimated acres required'; primaryValue=fmt(r.acresRequired,1); context='for '+fmt0(r.s.headCount)+' head over '+fmt(r.days,1)+' days';
+    }else if(state.questionMode==='compare'){
+      primaryLabel='Active scenario capacity'; primaryValue=fmt0(r.supportedHead)+' head'; context='See all three user-defined scenarios below.';
+    }
+    if(errs.length){ primaryValue='—'; context=errs[0]; }
+    $('primaryLabel').textContent=primaryLabel;
+    $('primaryValue').textContent=primaryValue;
+    $('primaryContext').textContent=context;
+
+    $('metricDays').textContent = r.s.headCount>0 ? fmt(r.grazingDays,1) : '—';
+    $('metricAcres').textContent = r.s.headCount>0 ? fmt(r.acresRequired,1) : '—';
+    $('metricForage').textContent = fmt0(r.availableForage);
+    $('metricDemand').textContent = r.s.headCount>0 ? fmt0(r.herdDailyDemand) : '—';
+    $('metricAU').textContent = r.s.headCount>0 ? fmt(r.totalAU,2) : '—';
+    $('metricAUM').textContent = r.s.headCount>0 ? fmt(r.totalAUM,2) : '—';
+
+    $('bProduced').textContent=fmt0(r.totalProduced)+' lb DM';
+    $('bAvailablePerAcre').textContent=fmt0(r.availablePerAcre)+' lb DM/ac';
+    $('bReserve').textContent=fmt0(r.protectedForage)+' lb DM';
+    $('bDemandHead').textContent=fmt(r.dailyDemandHead,1)+' lb DM/day';
+    $('bDurationDemand').textContent=r.s.headCount>0?fmt0(r.totalDemand)+' lb DM':'—';
+    $('bAcresHead').textContent=fmt(r.acresPerHead,2)+' ac/head';
+
+    const pct = Number.isFinite(r.capacityPct) ? clamp(r.capacityPct,0,100) : 100;
+    $('demandBar').style.width=pct+'%';
+    $('supplyDemandText').textContent = r.s.headCount>0 ? fmt(r.capacityPct,0)+'% used' : '—';
+    $('supplyLabel').textContent='Supply '+fmt0(r.availableForage)+' lb';
+    $('demandLabel').textContent='Demand '+(r.s.headCount>0?fmt0(r.totalDemand):'—')+' lb';
+    $('capacityGauge').style.setProperty('--pct',pct+'%');
+    $('gaugePct').textContent=r.s.headCount>0?fmt(r.capacityPct,0)+'%':'—';
+
+    let status='Waiting for herd size', capText='Enter a herd size to compare planned demand with forage supply.', warning='';
+    if(r.s.headCount>0){
+      if(!Number.isFinite(r.demandRatio) || r.availableForage<=0){
+        status='No usable forage calculated'; capText='Review forage production and availability assumptions.'; warning='The current assumptions leave no usable forage for the planned herd.';
+      }else if(r.demandRatio>1){
+        status='Planned demand exceeds supply'; capText='The entered herd and duration require about '+fmt((r.demandRatio-1)*100,0)+'% more forage than calculated available supply.';
+        warning='Demand exceeds calculated available forage. Reduce head count or duration, increase usable acres, or revise assumptions using local field information.';
+      }else if(r.demandRatio>.85){
+        status='Near calculated capacity'; capText='The plan uses '+fmt(r.capacityPct,0)+'% of calculated available forage. Small changes in conditions may materially affect the result.';
+        warning='This plan is close to the calculated forage limit. Consider a larger contingency if local conditions are uncertain.';
+      }else{
+        status='Within calculated capacity'; capText='The plan uses '+fmt(r.capacityPct,0)+'% of calculated available forage under the entered assumptions.';
+      }
+    }
+    $('capacityStatus').textContent=status;
+    $('capacityText').textContent=capText;
+    $('warningBox').textContent=warning;
+    $('warningBox').classList.toggle('show',!!warning);
+
+    renderCompare();
+    renderCalcDetails(r);
+  }
+
+  function renderCompare(){
+    const body=$('compareBody');
+    body.innerHTML='';
+    state.scenarios.forEach((s,i)=>{
+      const r=calculate(s);
+      const tr=document.createElement('tr');
+      const forageLabel=s.forageUnit==='tons'?fmt(s.forageProduction,2)+' t':fmt0(s.forageProduction)+' lb';
+      tr.innerHTML=
+        '<td><strong>'+escapeHtml(s.name)+'</strong>'+(i===state.activeScenario?'<br><span style="color:#666660">Active</span>':'')+'</td>'+
+        '<td class="num">'+fmt(s.acres,1)+'</td>'+
+        '<td class="num">'+forageLabel+'</td>'+
+        '<td class="num">'+fmt(s.utilization,0)+'%</td>'+
+        '<td class="num">'+fmt0(s.headCount)+'</td>'+
+        '<td class="num">'+fmt(r.days,1)+'</td>'+
+        '<td class="num">'+fmt0(r.supportedHead)+'</td>'+
+        '<td class="num">'+fmt(r.acresRequired,1)+'</td>';
+      body.appendChild(tr);
+    });
+  }
+
+  function renderCalcDetails(r){
+    const f=(title,formula,explanation)=>'<div class="formula"><strong>'+title+'</strong><code>'+formula+'</code><p>'+explanation+'</p></div>';
+    const effectivePct=r.effectiveFactor*100;
+    const auSource=r.s.auOverride===''?fmt(r.s.avgWeight,0)+' ÷ '+fmt(r.s.baseAuWeight,0):fmt(r.s.auOverride,2)+' override';
+    $('calcDetails').innerHTML =
+      f('Forage produced',fmt(r.s.acres,1)+' ac × '+fmt(r.foragePerAcre,0)+' lb DM/ac = '+fmt0(r.totalProduced)+' lb DM','Converts tons/acre to pounds/acre when needed.')+
+      f('Available forage',fmt0(r.totalProduced)+' × '+fmt(r.s.utilization,0)+'% × '+fmt(r.s.harvestEfficiency,0)+'% × (1 − '+fmt(r.s.reserve,0)+'%) × (1 − '+fmt(r.s.droughtBuffer,0)+'%) = '+fmt0(r.availableForage)+' lb DM','Effective availability factor: '+fmt(effectivePct,1)+'%. These are planning assumptions, not fixed recommendations.')+
+      f('Daily demand per head',fmt(r.s.avgWeight,0)+' lb × '+fmt(r.s.dmiPct,2)+'% = '+fmt(r.dailyDemandHead,1)+' lb DM/head/day','Dry matter intake is entered as percent of body weight.')+
+      f('Supported head',fmt0(r.availableForage)+' ÷ ('+fmt(r.dailyDemandHead,1)+' × '+fmt(r.days,1)+' days) = '+fmt(r.supportedHeadExact,2)+' → '+fmt0(r.supportedHead)+' whole head','Supported head is rounded down to avoid reporting a fractional animal as planning capacity.')+
+      f('Grazing days',fmt0(r.availableForage)+' ÷ '+fmt0(r.herdDailyDemand)+' lb/day = '+fmt(r.grazingDays,2)+' days','Uses the entered herd size.')+
+      f('Acres required',fmt0(r.totalDemand)+' lb total demand ÷ '+fmt0(r.availablePerAcre)+' lb available/ac = '+fmt(r.acresRequired,2)+' ac','Uses the entered herd size and planning duration.')+
+      f('Animal units',auSource+' = '+fmt(r.auEquivalent,3)+' AU/head; × '+fmt0(r.s.headCount)+' head = '+fmt(r.totalAU,2)+' AU','Automatic AU is weight-based unless the user enters an override.')+
+      f('AUM equivalent',fmt(r.totalAU,2)+' AU × '+fmt(r.days,1)+' days ÷ '+fmt(r.s.aumDays,1)+' days/AUM = '+fmt(r.totalAUM,2)+' AUM','Time-based AUM equivalent using the editable days-per-AUM assumption.');
+  }
+
+  function recalc(markDirty){
+    collectInputs();
+    renderResults();
+    renderScenarioStrip();
+    persistSession();
+    updateSaveState(markDirty !== false);
+  }
+
+  function stateForHash(){
+    return {
+      project:{id:state.project.id,name:state.project.name,createdAt:state.project.createdAt},
+      activeScenario:state.activeScenario,questionMode:state.questionMode,scenarios:state.scenarios
+    };
+  }
+
+  function simpleHash(obj){
+    const str=JSON.stringify(obj);
+    let h=2166136261;
+    for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619);}
+    return (h>>>0).toString(16);
+  }
+
+  function updateSaveState(markDirty=true){
+    const current=simpleHash(stateForHash());
+    lastRenderedHash=current;
+    const isSaved=!!state.lastSavedHash && current===state.lastSavedHash;
+    $('saveDot').classList.toggle('saved',isSaved);
+    $('saveStatus').textContent=isSaved?'Saved':'Unsaved changes';
+    if(!markDirty && !state.lastSavedHash){
+      $('saveStatus').textContent='Unsaved';
+    }
+  }
+
+  function persistSession(){
+    try{
+      sessionStorage.setItem(SESSION_KEY,JSON.stringify({
+        project:state.project,activeScenario:state.activeScenario,questionMode:state.questionMode,scenarios:state.scenarios,lastSavedHash:state.lastSavedHash
+      }));
+    }catch(e){}
+  }
+
+  function restoreSession(){
+    try{
+      const raw=sessionStorage.getItem(SESSION_KEY);
+      if(!raw) return false;
+      const parsed=JSON.parse(raw);
+      if(!parsed || !Array.isArray(parsed.scenarios)) return false;
+      state.project={
+        id:escapeText(parsed.project && parsed.project.id || uuid()),
+        name:escapeText(parsed.project && parsed.project.name || 'Stocking Rate Plan').slice(0,100),
+        createdAt:escapeText(parsed.project && parsed.project.createdAt || nowIso()),
+        updatedAt:escapeText(parsed.project && parsed.project.updatedAt || nowIso())
+      };
+      state.scenarios=[0,1,2].map(i=>normalizeScenario(parsed.scenarios[i] || defaultScenario(scenarioNames[i],i)));
+      state.scenarios.forEach((s,i)=>s.name=scenarioNames[i]);
+      state.activeScenario=clamp(Math.round(num(parsed.activeScenario,0)),0,2);
+      state.questionMode=['head','days','acres','compare'].includes(parsed.questionMode)?parsed.questionMode:'head';
+      state.lastSavedHash=parsed.lastSavedHash || null;
+      return true;
+    }catch(e){ return false; }
+  }
+
+  function buildRAProject(){
+    collectInputs();
+    state.project.updatedAt=nowIso();
+    return {
+      raFile:true,
+      formatVersion:TOOL.formatVersion,
+      tool:{id:TOOL.id,name:TOOL.name,version:TOOL.version},
+      project:{
+        id:state.project.id,
+        name:state.project.name || 'Stocking Rate Plan',
+        createdAt:state.project.createdAt,
+        updatedAt:state.project.updatedAt
+      },
+      preferences:{units:'imperial'},
+      state:{
+        landInputs:null,
+        forageInputs:null,
+        livestockGroups:null,
+        questionMode:state.questionMode,
+        activeScenario:state.activeScenario,
+        scenarios:state.scenarios,
+        assumptions:{
+          note:'Scenario values include utilization, harvest efficiency, residual/reserve, drought buffer, base AU weight, and days per AUM.'
+        },
+        notes:state.scenarios.map(s=>s.notes)
+      },
+      spatial:null,
+      metadata:{generator:'RanchAssist',schema:'ra-project'}
+    };
+  }
+
+  function sanitizeFilename(name){
+    return (name||'Stocking_Rate_Plan').replace(/[\\/:*?"<>|]+/g,' ').replace(/\s+/g,' ').trim().replace(/ /g,'_').slice(0,90) || 'Stocking_Rate_Plan';
+  }
+
+  function downloadBlob(content,type,filename){
+    const blob=new Blob([content],{type});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+  }
+
+  function saveProject(){
+    const project=buildRAProject();
+    const json=JSON.stringify(project,null,2);
+    downloadBlob(json,'application/x-ranchassist-project',sanitizeFilename(project.project.name)+'.ra');
+    state.lastSavedHash=simpleHash(stateForHash());
+    persistSession();updateSaveState();
+    toast('Project saved. Your RanchAssist .ra project file is ready.');
+  }
+
+  function validateRAProject(p){
+    if(!p || p.raFile!==true) throw new Error('Not a RanchAssist project. Choose a .ra file exported from RanchAssist.');
+    if(p.formatVersion!=='1.0') throw new Error('This project format is not supported by this version.');
+    if(!p.tool || p.tool.id!==TOOL.id){
+      const other=p.tool && p.tool.name ? p.tool.name : 'another RanchAssist tool';
+      throw new Error('Different RanchAssist tool. This project belongs to '+other+'.');
+    }
+    if(!p.project || !p.project.id) throw new Error('Project is incomplete. The file is missing its project identifier.');
+    if(!p.state || !Array.isArray(p.state.scenarios)) throw new Error('Project is incomplete. The file is missing stocking-rate scenario data.');
+    return true;
+  }
+
+  function migrateProjectIfNeeded(p){ return p; }
+
+  async function openProjectFile(file){
+    try{
+      const text=await file.text();
+      const parsed=JSON.parse(text);
+      validateRAProject(parsed);
+      const p=migrateProjectIfNeeded(parsed);
+      state.project={
+        id:escapeText(p.project.id),
+        name:escapeText(p.project.name || 'Stocking Rate Plan').slice(0,100),
+        createdAt:escapeText(p.project.createdAt || nowIso()),
+        updatedAt:escapeText(p.project.updatedAt || nowIso())
+      };
+      state.scenarios=[0,1,2].map(i=>normalizeScenario(p.state.scenarios[i] || defaultScenario(scenarioNames[i],i)));
+      state.scenarios.forEach((s,i)=>s.name=scenarioNames[i]);
+      state.activeScenario=clamp(Math.round(num(p.state.activeScenario,0)),0,2);
+      state.questionMode=['head','days','acres','compare'].includes(p.state.questionMode)?p.state.questionMode:'head';
+      state.lastSavedHash=null;
+      syncInputsFromState();
+      renderResults();
+      state.lastSavedHash=simpleHash(stateForHash());
+      persistSession();updateSaveState();
+      toast('Project opened. Your saved RanchAssist project has been restored.');
+    }catch(err){
+      toast(err && err.message ? err.message : 'Project file could not be read. The file may be incomplete or damaged.');
+    }finally{
+      $('fileInput').value='';
+    }
+  }
+
+  function duplicateProject(){
+    collectInputs();
+    state.project={id:uuid(),name:(state.project.name||'Stocking Rate Plan')+' Copy',createdAt:nowIso(),updatedAt:nowIso()};
+    $('projectName').value=state.project.name;
+    state.lastSavedHash=null;
+    persistSession();updateSaveState();
+    toast('Project duplicated. This copy has a new project ID.');
+  }
+
+  function clearSession(){
+    if(!confirm('Clear this session?\\n\\nThis removes the current unsaved RanchAssist project from this browser session. Saved .ra files on your device will not be affected.')) return;
+    try{sessionStorage.removeItem(SESSION_KEY);}catch(e){}
+    state=freshState();
+    syncInputsFromState();renderResults();updateSaveState(false);
+    toast('Session cleared.');
+  }
+
+  function copyActiveToNext(){
+    collectInputs();
+    const next=(state.activeScenario+1)%3;
+    const copied=JSON.parse(JSON.stringify(scenario()));
+    copied.name=scenarioNames[next];
+    state.scenarios[next]=normalizeScenario(copied);
+    state.scenarios[next].name=scenarioNames[next];
+    persistSession();renderCompare();renderScenarioStrip();updateSaveState();
+    toast('Active scenario copied to '+scenarioNames[next]+'.');
+  }
+
+  function buildSummary(scenarioIndex=state.activeScenario){
+    collectInputs();
+    const s=state.scenarios[scenarioIndex],r=calculate(s);
+    const lines=[
+      'RanchAssist™ Stocking Rate Calculator',
+      'Project: '+(state.project.name||'Stocking Rate Plan'),
+      'Scenario: '+s.name,
+      s.pastureName?'Pasture: '+s.pastureName:null,
+      '',
+      'KEY RESULTS',
+      'Supported head: '+fmt0(r.supportedHead),
+      'Estimated grazing days for '+fmt0(s.headCount)+' head: '+fmt(r.grazingDays,1),
+      'Estimated acres required: '+fmt(r.acresRequired,1),
+      'Animal units (entered herd): '+fmt(r.totalAU,2),
+      'AUM equivalent: '+fmt(r.totalAUM,2),
+      'Available forage: '+fmt0(r.availableForage)+' lb DM',
+      'Daily herd demand: '+fmt0(r.herdDailyDemand)+' lb DM/day',
+      'Total demand for duration: '+fmt0(r.totalDemand)+' lb DM',
+      '',
+      'ASSUMPTIONS',
+      'Usable acres: '+fmt(s.acres,1),
+      'Grazing period: '+fmt(r.days,1)+' days',
+      'Forage production: '+(s.forageUnit==='tons'?fmt(s.forageProduction,2)+' tons/ac':fmt0(s.forageProduction)+' lb DM/ac'),
+      'Utilization: '+fmt(s.utilization,0)+'%',
+      'Harvest efficiency: '+fmt(s.harvestEfficiency,0)+'%',
+      'Residual/reserve: '+fmt(s.reserve,0)+'%',
+      'Drought buffer: '+fmt(s.droughtBuffer,0)+'%',
+      'Livestock class: '+s.livestockClass,
+      'Average weight: '+fmt(s.avgWeight,0)+' lb',
+      'DMI: '+fmt(s.dmiPct,2)+'% BW/day',
+      'AU equivalent/head: '+fmt(r.auEquivalent,3),
+      'Days/AUM: '+fmt(s.aumDays,1),
+      s.notes?'Notes: '+s.notes:null,
+      '',
+      'Planning estimate only. Local forage conditions and professional/local guidance should govern real stocking decisions.',
+      'Generated: '+new Date().toLocaleString()
+    ].filter(v=>v!==null);
+    return lines.join('\\n');
+  }
+
+  async function copySummary(){
+    const text=buildSummary();
+    try{
+      if(navigator.clipboard && window.isSecureContext){
+        await navigator.clipboard.writeText(text);
+      }else{
+        const ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();
+      }
+      toast('Summary copied.');
+    }catch(e){
+      toast('Copy was unavailable on this browser. Use Share by Email or select the report text after printing.');
+    }
+  }
+
+  function exportCsv(){
+    collectInputs();
+    const rows=[[
+      'Scenario','Pasture','Usable Acres','Duration Days','Forage Production lb DM/ac','Utilization %','Harvest Efficiency %','Reserve %','Drought Buffer %',
+      'Livestock Class','Head Count','Average Weight lb','DMI % BW','Available Forage lb DM','Daily Demand/Head lb DM','Herd Daily Demand lb DM',
+      'Supported Head','Grazing Days','Acres Required','Animal Units','AUM Equivalent'
+    ]];
+    state.scenarios.forEach(s=>{
+      const r=calculate(s);
+      rows.push([s.name,s.pastureName,s.acres,r.days,r.foragePerAcre,s.utilization,s.harvestEfficiency,s.reserve,s.droughtBuffer,
+        s.livestockClass,s.headCount,s.avgWeight,s.dmiPct,r.availableForage,r.dailyDemandHead,r.herdDailyDemand,r.supportedHead,r.grazingDays,r.acresRequired,r.totalAU,r.totalAUM]);
+    });
+    const csv=rows.map(row=>row.map(v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"').join(',')).join('\\r\\n');
+    downloadBlob(csv,'text/csv;charset=utf-8',sanitizeFilename(state.project.name)+'_scenarios.csv');
+    toast('Scenario CSV exported.');
+  }
+
+  function openShare(){
+    $('shareModal').classList.add('show');
+    setTimeout(()=>$('shareEmail').focus(),0);
+  }
+  function closeShare(){ $('shareModal').classList.remove('show'); }
+
+  function sendEmail(){
+    const email=$('shareEmail').value.trim();
+    const note=$('shareNote').value.trim();
+    const summary=buildSummary();
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ toast('Enter a valid email address.'); return; }
+    const payload={recipient:email,subject:(state.project.name||'Stocking Rate Plan')+' — RanchAssist Stocking Rate Summary',summary,note,timestamp:new Date().toLocaleString()};
+    if(window.google && google.script && google.script.run){
+      $('sendEmailBtn').disabled=true;
+      google.script.run
+        .withSuccessHandler(()=>{ $('sendEmailBtn').disabled=false;closeShare();toast('Email sent.'); })
+        .withFailureHandler(err=>{ $('sendEmailBtn').disabled=false;toast(err&&err.message?err.message:'Email could not be sent.'); })
+        .shareStockingRateSummary(payload);
+    }else{
+      const body=(note?note+'\\n\\n':'')+summary;
+      window.location.href='mailto:'+encodeURIComponent(email)+'?subject='+encodeURIComponent(payload.subject)+'&body='+encodeURIComponent(body);
+      closeShare();
+    }
+  }
+
+  function printReport(){ window.print(); }
+
+  function toast(msg){
+    clearTimeout(toastTimer);
+    $('toast').textContent=msg;
+    $('toast').classList.add('show');
+    toastTimer=setTimeout(()=>$('toast').classList.remove('show'),4200);
+  }
+
+  function escapeHtml(s){
+    return String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+  }
+
+  function wireEvents(){
+    fields.forEach(id=>{
+      const el=$(id);
+      if(!el) return;
+      const ev=(el.tagName==='SELECT')?'change':'input';
+      el.addEventListener(ev,()=>{
+        if(id==='livestockClass'){
+          const s=scenario();
+          if(el.value!=='Custom'){
+            const p=presets[el.value];
+            s.livestockClass=el.value;s.avgWeight=p.weight;s.dmiPct=p.dmi;s.auOverride='';
+            $('avgWeight').value=p.weight;$('dmiPct').value=p.dmi;$('auOverride').value='';
+          }
+        }
+        recalc(true);
+      });
+    });
+    $('projectName').addEventListener('input',()=>{state.project.name=($('projectName').value.trim()||'Stocking Rate Plan').slice(0,100);persistSession();updateSaveState();});
+    document.querySelectorAll('[data-duration-unit]').forEach(b=>b.addEventListener('click',()=>{scenario().durationUnit=b.dataset.durationUnit;syncInputsFromState();recalc(true);}));
+    document.querySelectorAll('[data-forage-unit]').forEach(b=>b.addEventListener('click',()=>{
+      collectInputs();
+      const s=scenario();
+      if(s.forageUnit!==b.dataset.forageUnit){
+        s.forageProduction=b.dataset.forageUnit==='tons'?s.forageProduction/2000:s.forageProduction*2000;
+        s.forageUnit=b.dataset.forageUnit;
+      }
+      syncInputsFromState();recalc(true);
+    }));
+    document.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',()=>{collectInputs();state.questionMode=b.dataset.mode;syncInputsFromState();recalc(true);}));
+    $('saveProjectBtn').addEventListener('click',saveProject);
+    $('mobileProjectBtn').addEventListener('click',saveProject);
+    $('openProjectBtn').addEventListener('click',()=>$('fileInput').click());
+    $('mobileOpenBtn').addEventListener('click',()=>$('fileInput').click());
+    $('fileInput').addEventListener('change',e=>{if(e.target.files&&e.target.files[0]) openProjectFile(e.target.files[0]);});
+    $('duplicateProjectBtn').addEventListener('click',duplicateProject);
+    $('clearBtn').addEventListener('click',clearSession);
+    $('exportCsvBtn').addEventListener('click',exportCsv);
+    $('mobileExportBtn').addEventListener('click',exportCsv);
+    $('printBtn').addEventListener('click',printReport);
+    $('shareBtn').addEventListener('click',openShare);
+    $('mobileShareBtn').addEventListener('click',openShare);
+    $('closeShareBtn').addEventListener('click',closeShare);
+    $('copySummaryBtn').addEventListener('click',copySummary);
+    $('sendEmailBtn').addEventListener('click',sendEmail);
+    $('copyScenarioBtn').addEventListener('click',copyActiveToNext);
+    $('shareModal').addEventListener('click',e=>{if(e.target===$('shareModal')) closeShare();});
+    document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('shareModal').classList.contains('show')) closeShare();});
+    window.addEventListener('beforeunload',e=>{
+      const current=simpleHash(stateForHash());
+      if(state.lastSavedHash && current!==state.lastSavedHash){e.preventDefault();e.returnValue='';}
+    });
+  }
+
+  restoreSession();
+  syncInputsFromState();
+  renderResults();
+  updateSaveState(false);
+  wireEvents();
+})();
+</script>
+</body>
+</html>
