@@ -1,439 +1,207 @@
-# StockingRateCalculator
+# Stocking Rate Calculator | RanchAssist™
 
-RanchAssist™ Stocking Rate Calculator
-README_SETUP.txt
-Version 1.0.0
-Tool ID: stocking-rate-calculator
+> Estimate supported head count, grazing days, acres required, animal units, and forage demand.
 
-============================================================
-1. WHAT THIS PROJECT INCLUDES
-============================================================
+**Live app:** [https://stockingratecalculator.ranchassist.com](https://stockingratecalculator.ranchassist.com)  
+**RanchAssist tools:** [View Ranch Tools](https://ranchassist.com/tools)  
+**Tool ID:** `stocking-rate-calculator`  
+**Category:** Livestock
 
-This package contains a complete Google Apps Script web app and a standalone HTML version.
+## Overview
 
-Files:
-- Code.gs.txt
-- Index.html.txt
-- appsscript.json.txt
-- Standalone_Stocking_Rate_Calculator.html.txt
-- README_SETUP.txt
+A livestock grazing-capacity planning calculator that connects available land and forage assumptions to user-defined herd demand. It can answer how many head may be supported, how long a herd may graze, how many acres may be needed, or how multiple scenarios compare.
 
-The app estimates:
-- Supported head count
-- Grazing days for an entered herd
-- Acres required
-- Acres per head
-- Available forage
-- Daily forage demand per head
-- Daily herd forage demand
-- Total grazing-period forage demand
-- Animal units (AU)
-- Animal-unit-month (AUM) equivalents
-- Supply-vs-demand capacity
+Stocking Rate Calculator is one of the standalone tools in the RanchAssist ecosystem. The product is designed around a focused workflow: open the tool for the ranch job in front of you, enter or map the information that matters, review assumptions and calculations, and leave with a result that can be saved, exported, printed, copied, or shared.
 
-It also includes:
-- Base / Conservative / Aggressive user-controlled scenarios
-- Live calculations
-- Question modes
-- Calculation Details / formulas
-- CSV export
-- PDF via print dialog
-- Print
+The tool is intended to feel like practical field-operations software rather than a general ranch-management platform. It does not require a RanchAssist account and does not depend on a shared RanchAssist project database.
+
+## Key capabilities
+
+- Enter usable grazing acres and grazing duration.
+- Enter forage production, utilization, harvest efficiency, reserve/residual, and drought-buffer assumptions.
+- Model mature cows, cow-calf pairs, replacement heifers, stockers/feeders, bulls, or custom livestock classes.
+- Use average live weight and dry-matter-intake percentage as editable inputs.
+- Choose a question mode: head capacity, grazing days, acres required, or scenario comparison.
+- Compare up to three temporary user-controlled scenarios.
+- Show forage supply vs. demand, capacity indicators, AU/AUM metrics, and calculation details.
+
+## Typical workflow
+
+1. Define usable grazing land and planning period.
+2. Enter forage production and utilization/reserve assumptions.
+3. Define livestock class, head count or target, live weight, and intake assumptions.
+4. Choose the planning question.
+5. Review forage supply, animal demand, head/days/acres output, and warnings.
+6. Compare alternative scenarios if useful.
+7. Save the project or export/share the planning summary.
+
+## Calculation / measurement model
+
+- Total forage produced is based on usable acres × user-entered forage production.
+- Usable forage applies utilization/harvest/reserve/drought assumptions to the produced forage.
+- Daily animal demand is derived from average live weight × daily dry-matter intake percentage.
+- Herd daily demand = daily animal demand × head count.
+- Supported head count, grazing days, or acres required is solved from forage supply relative to herd demand and the selected planning mode.
+- Animal units and AUM equivalents are displayed as planning metrics based on the selected/user-entered animal-unit assumptions.
+
+Important formulas and assumptions should be available in the UI through **Calculation Details** or the equivalent audit view. RanchAssist favors transparent calculations over opaque outputs, and user-editable defaults should be treated as planning examples rather than universal recommendations.
+
+## Project state
+
+A saved RanchAssist `.ra` file for this tool should preserve enough information to resume meaningful editing, including land inputs, forage inputs, livestock groups, question mode, scenarios, assumptions, notes, unit preferences, and calculation settings.
+
+Every `.ra` project should include the shared RanchAssist project metadata: project UUID, project name, originating tool ID, tool version, `.ra` format version, `createdAt`, `updatedAt`, editable state, and spatial state where applicable. After opening a project, derived values should be recalculated using the current application logic rather than blindly trusting previously saved calculated totals.
+
+## Export and sharing
+
+Supported/expected outputs for this tool include:
+
+- `.ra` project file
+- PDF / print summary
+- CSV scenario table
 - Copy Summary
-- Email sharing
-- RanchAssist .ra project Save / Open / Duplicate
-- sessionStorage recovery
-- Clear Session
-- Unsaved-change status
-- Responsive desktop/tablet/mobile UI
-- Print-optimized output
+- Email summary
 
-No account or database is required.
+Report-oriented outputs should include the tool name, project name when supplied, important inputs, assumptions, calculations, key results, warnings/notes, and a timestamp. Spatial reports should include the relevant map or plan image when practical.
 
-============================================================
-2. IMPORTANT CALCULATION MODEL
-============================================================
+## Project files, session data, and privacy
 
-The calculator intentionally uses user-entered planning assumptions rather
-than claiming a universal stocking rate.
+RanchAssist uses a **session-first, user-controlled persistence model**.
 
-FORAGE
+- No RanchAssist account is required for the standalone tool.
+- `sessionStorage` may protect active work from an accidental refresh or same-tab interruption.
+- `localStorage` is not used as permanent project storage.
+- RanchAssist does not permanently store the user's ranch/project data by default.
+- **Save Project** creates a user-controlled `.ra` RanchAssist Project File containing the editable project state.
+- **Open Project** restores a compatible `.ra` file after validation.
+- **Duplicate Project** creates a new project lineage with a new project UUID.
+- **Clear Session / Start Over** clears active browser-session data without deleting `.ra` files or exports already saved on the user's device.
 
-Forage production is normalized to pounds of dry matter per acre.
+A `.ra` file is distinct from report/data exports. PDF, CSV, PNG, GeoJSON, print output, email, and copied summaries are for communication or interoperability; `.ra` is for resuming the editable project.
 
-Total forage produced:
-  usable acres × forage production lb DM/acre
+Imported project files are data, not executable code. The application must not execute imported JavaScript, use `eval`, restore secrets, or inject unsanitized imported HTML.
 
-Effective availability factor:
-  utilization
-  × harvest efficiency
-  × (1 - residual/reserve)
-  × (1 - drought buffer)
 
-Available forage:
-  total forage produced × effective availability factor
+## Runtime configuration
 
-This means utilization, harvest efficiency, reserve, and drought buffer are
-separate user-controlled planning factors. Users should adjust them to match
-their own management system and local guidance.
+The core stocking-rate calculations do not require a third-party API. Email sharing uses Apps Script `MailApp`. Application-level configuration belongs in Script Properties rather than user-facing settings.
 
-LIVESTOCK DEMAND
+RanchAssist administrators configure developer infrastructure; normal users should never be asked to paste API keys, Mapbox tokens, OAuth secrets, or other developer credentials into the tool.
 
-Daily dry matter demand per head:
-  average live weight × daily DMI % body weight
+## Architecture
 
-Herd daily demand:
-  daily demand per head × head count
+This repository follows the RanchAssist standalone-tool architecture:
 
-Total grazing-period demand:
-  herd daily demand × duration in days
+- **Primary deployment:** Google Apps Script Web App.
+- **Frontend:** semantic HTML5, componentized CSS, and lightweight client-side JavaScript.
+- **Dependencies:** kept intentionally minimal so the tool remains maintainable and field-friendly.
+- **Responsive behavior:** desktop, tablet, and phone are treated as distinct layouts rather than a desktop interface simply being scaled down.
+- **Accessibility:** real form labels, keyboard-operable controls, visible focus states, plain-language validation, WCAG-AA-minded contrast, and large mobile touch targets.
+- **Server responsibilities:** server-only operations such as email sharing or private API calls stay in Apps Script rather than exposing secrets in the browser.
 
-SUPPORTED HEAD
+The application should remain independently usable and deployable. It does not depend on a shared RanchAssist account system or a cross-tool project database.
 
-Supported head:
-  available forage ÷ (daily demand per head × duration)
 
-The displayed supported-head result is rounded DOWN to a whole animal.
+## Suggested repository structure
 
-GRAZING DAYS
+The exact filenames may vary by release, but a RanchAssist repository should stay intentionally small and understandable. A common Apps Script layout is:
 
-Grazing days:
-  available forage ÷ herd daily demand
+```text
+.
+├── Code.gs                 # Apps Script backend / runtime configuration / email share
+├── Index.html              # Main UI (often self-contained HTML + CSS + client JS)
+├── appsscript.json         # Apps Script manifest, when managed in source
+├── README.md               # Repository documentation
+└── README_SETUP.txt        # Deployment/configuration notes when distributed as source files
+```
 
-ACRES REQUIRED
+Some releases may include separate style/app partials or a standalone HTML build when that materially improves maintainability or portability. Keep secrets out of all client-side files.
 
-Available forage per acre:
-  forage production lb DM/acre × effective availability factor
 
-Acres required:
-  total grazing-period demand ÷ available forage per acre
+## Google Apps Script deployment
 
-ANIMAL UNITS
+A typical deployment flow is:
 
-Automatic AU equivalent per head:
-  average live weight ÷ base AU weight
+1. Create or open the Google Apps Script project for this repository.
+2. Add the repository's Apps Script backend and HTML frontend files.
+3. Configure any required **Script Properties** listed in the Runtime Configuration section below.
+4. Save the project.
+5. Choose **Deploy → New deployment → Web app**.
+6. Select the execution/access settings appropriate for the RanchAssist deployment.
+7. Authorize required Apps Script services, such as `MailApp`, when email sharing is enabled.
+8. Deploy and verify the public RanchAssist subdomain routes to the current web-app deployment.
 
-Default base AU weight is an editable example value of 1,000 lb.
+Do not put private API keys directly in frontend HTML or JavaScript. Script Properties are the canonical configuration store for Apps Script deployments.
 
-The user can override AU equivalent directly.
 
-Total AU:
-  AU equivalent per head × head count
+## Design system
 
-AUM equivalent:
-  total AU × duration days ÷ days per AUM
+The UI follows the RanchAssist visual standard: modern field-operations software, monochrome-first surfaces, warm off-white canvas, near-black text, thin borders, restrained functional color, compact controls, strong alignment, minimal decorative effects, and responsive layouts designed for real use from a phone, tablet, pickup, barn, pasture, or ranch office.
 
-Default days per AUM is an editable example value of 30.4 days.
+Key UX expectations include:
 
-AU/AUM are shown as planning equivalents. Forage demand remains driven by the
-user-entered live weight and dry matter intake percentage.
+- Results should be understandable quickly.
+- Units should always be explicit.
+- Assumptions should appear near the inputs they affect.
+- Advanced settings should stay out of the way of the primary workflow.
+- Validation should explain both the problem and how to fix it.
+- Destructive actions such as Clear Session should require an appropriate confirmation when meaningful work exists.
+- Status should never rely on color alone.
+- Mobile layouts should favor large controls, limited typing, stacked sections/bottom sheets, and early visibility of the primary result.
 
-============================================================
-3. GOOGLE APPS SCRIPT INSTALLATION
-============================================================
+## Safety and limitations
 
-1. Create a new Google Apps Script project.
+Stocking results depend on local forage production, forage quality, precipitation, season, utilization, pasture condition, livestock requirements, and management. Scenario labels are user-controlled planning cases, not forecasts or agronomic recommendations.
 
-2. Create or replace the following project files:
+RanchAssist should use language such as **estimate**, **planning estimate**, **projected requirement**, **mapped measurement**, and **user-defined scenario**. Avoid presenting results as guaranteed, certified, surveyed, engineered, legally compliant, veterinarian-approved, or otherwise authoritative beyond what the user's inputs and the tool's calculations support.
 
-   Code.gs
-   - Copy the contents of Code.gs.txt into Code.gs.
+## QA checklist
 
-   Index.html
-   - Create an HTML file named Index.
-   - Copy the contents of Index.html.txt into Index.html.
-
-   appsscript.json
-   - Enable "Show appsscript.json manifest file in editor" in Project Settings
-     if necessary.
-   - Replace the manifest with the contents of appsscript.json.txt.
-
-3. Save the project.
-
-4. Deploy:
-   - Click Deploy
-   - Select New deployment
-   - Type: Web app
-   - Execute as: Me / user deploying
-   - Who has access: Anyone (or the access level appropriate for your site)
-   - Deploy
-
-5. Authorize the project when prompted.
-   Email sharing uses Apps Script MailApp and therefore requires the normal
-   Apps Script email authorization for the deployment owner.
-
-6. Open the deployment URL and verify the calculator loads.
-
-7. If embedding in Google Sites:
-   - Use the deployed web app URL.
-   - The supplied Code.gs uses XFrameOptionsMode.ALLOWALL so it can be embedded
-     where the Apps Script deployment and browser policy permit it.
-
-============================================================
-4. SCRIPT PROPERTIES / API CONFIGURATION
-============================================================
-
-Required Script Properties:
-- None.
-
-Optional Script Properties:
-- None.
-
-Server-only secrets:
-- None.
-
-External APIs:
-- None.
-
-Mapbox:
-- Not used by this calculator.
-
-The user is never asked for an API key, token, or developer credential.
-
-============================================================
-5. EMAIL SHARING
-============================================================
-
-In the Apps Script deployment:
-- User enters only the destination email address and optional message.
-- Browser sends the prepared summary to the server-side function:
-  shareStockingRateSummary(payload)
-- Apps Script MailApp sends the email.
-- No SMTP or third-party email API credential is required.
-- The app does not permanently store the recipient or project data.
-
-In the standalone HTML version:
-- If google.script.run is unavailable, the Share action uses a mailto: link and
-  opens the user's configured email application.
-
-============================================================
-6. RANCHASSIST .ra PROJECT FILES
-============================================================
-
-The app implements RanchAssist Project File format 1.0.
-
-Save Project creates:
-  <Project_Name>.ra
-
-The .ra file includes:
-- raFile sentinel
-- formatVersion
-- tool ID
-- tool name
-- tool version
-- project UUID
-- project name
-- createdAt
-- updatedAt
-- active scenario
-- question mode
-- all three scenario inputs
-- assumptions
-- notes
-- preferences
-- RanchAssist metadata
-
-No API keys, auth tokens, cookies, or executable code are included.
-
-Open Project:
-- Reads the file locally in the browser
-- Parses JSON
-- Verifies raFile === true
-- Verifies formatVersion
-- Verifies tool ID matches stocking-rate-calculator
-- Verifies project ID
-- Verifies scenario state exists
-- Restores source inputs
-- Recalculates all derived values using current application logic
-
-Duplicate Project:
-- Copies the current editable state
-- Creates a NEW project UUID
-- Keeps the active project editable
-
-============================================================
-7. SESSION PRIVACY MODEL
-============================================================
-
-The app:
-- Does not require sign-in
-- Does not use a database
-- Does not use localStorage
-- Uses sessionStorage only for active-session resilience
-- Keeps user data in the active browser session
-- Lets the user explicitly save a .ra file for later continuation
-- Lets the user explicitly export or share results
-
-Clear Session:
-- Clears current project state and sessionStorage
-- Does not delete previously downloaded .ra, CSV, or PDF files
-
-============================================================
-8. STANDALONE HTML
-============================================================
-
-Standalone_Stocking_Rate_Calculator.html.txt contains the same self-contained
-frontend.
-
-To use it as a normal HTML file:
-1. Make a copy.
-2. Rename the copy:
-   Stocking_Rate_Calculator.html
-3. Open it in a browser or deploy it to a static host.
-
-All calculation, scenario, .ra, session, CSV, copy, and print features work
-client-side.
-
-Email sharing falls back to the user's email application because MailApp is
-only available inside Google Apps Script.
-
-============================================================
-9. PDF EXPORT
-============================================================
-
-The app uses a print-optimized report rather than a PDF library.
-
-To save PDF:
-1. Click PDF / Print.
-2. In the browser print dialog select "Save as PDF".
-3. Save the report.
-
-This avoids unnecessary client libraries while preserving a clean report.
-
-============================================================
-10. DEFAULT EXAMPLE VALUES
-============================================================
-
-The app ships with editable example values for demonstration and fast setup.
-
-These values are NOT authoritative recommendations.
-
-Base scenario example:
-- 100 usable acres
-- 2,500 lb DM/acre forage production
-- 50% utilization
-- 80% harvest efficiency
-- 10% residual/reserve
-- 10% drought buffer
-- 50 mature cows
-- 1,200 lb average weight
-- 2.5% body weight daily DMI
-- 90-day grazing period
-- 1,000 lb base AU weight
-- 30.4 days per AUM
-
-Conservative and Aggressive are also user-controlled examples, not forecasts.
-
-============================================================
-11. QA TEST CHECKLIST
-============================================================
-
-A. LIVE CALCULATION
-[ ] Change acres and confirm all capacity metrics update.
-[ ] Change forage production and confirm available forage updates.
-[ ] Change utilization, harvest efficiency, reserve, and drought buffer.
-[ ] Change herd count, weight, and DMI.
-[ ] Switch duration between days and months.
-[ ] Switch forage production between lb DM/ac and tons/ac.
-[ ] Verify no NaN or Infinity is displayed.
-
-B. QUESTION MODES
-[ ] How many head can I stock?
-[ ] How many grazing days?
-[ ] How many acres do I need?
-[ ] Compare scenarios
-
-C. SCENARIOS
-[ ] Edit Base.
-[ ] Edit Conservative.
-[ ] Edit Aggressive.
-[ ] Confirm values remain distinct when switching.
-[ ] Use Copy active to next.
-[ ] Confirm comparison table updates.
-
-D. PROJECT SAVE / REOPEN
-[ ] Enter meaningful project data.
-[ ] Save .ra.
-[ ] Clear Session.
-[ ] Open .ra.
-[ ] Confirm all editable inputs restore.
-[ ] Confirm calculations regenerate.
-
-E. WRONG TOOL / INVALID FILE
-[ ] Attempt to open arbitrary JSON.
-[ ] Confirm "Not a RanchAssist project" error.
-[ ] Attempt a .ra file from another RanchAssist tool.
-[ ] Confirm wrong-tool rejection.
-[ ] Truncate a .ra file and confirm safe failure.
-
-F. REFRESH RECOVERY
-[ ] Make unsaved edits.
-[ ] Refresh the page.
-[ ] Confirm active session returns from sessionStorage.
-
-G. CLEAR SESSION
-[ ] Save a .ra file.
-[ ] Click Clear Session.
-[ ] Confirm browser state resets.
-[ ] Confirm downloaded .ra file remains on the device.
-
-H. EXPORT / SHARE
-[ ] Export CSV.
-[ ] Open CSV and verify all three scenarios.
-[ ] Use PDF / Print and inspect print layout.
-[ ] Copy Summary.
-[ ] Send email in Apps Script deployment.
-[ ] Test standalone HTML email fallback.
-
-I. MOBILE
-[ ] Test at 320px width.
-[ ] Test normal iPhone / Android width.
-[ ] Test tablet.
-[ ] Confirm no page-level horizontal overflow.
-[ ] Confirm numeric inputs use mobile-friendly input modes.
-[ ] Confirm bottom action bar is usable.
-
-J. ACCESSIBILITY
-[ ] Navigate with keyboard.
-[ ] Verify visible focus states.
-[ ] Verify labels are associated with inputs.
-[ ] Verify status messages include text and do not rely on color alone.
-
-============================================================
-12. PRODUCTION NOTES
-============================================================
-
-- This is a planning calculator, not an agronomic guarantee.
-- Keep default assumptions editable.
-- Do not replace local forage measurements or professional/local guidance with
-  generic defaults.
-- If future external services are introduced, follow the RanchAssist API,
-  Secrets & Runtime Configuration Standard:
-  - Store application configuration in Script Properties.
-  - Never ask ranchers for developer credentials.
-  - Keep private secrets server-side.
-  - Explicitly allowlist only client-safe configuration.
-  - Never serialize credentials into .ra files or exports.
-
-============================================================
-13. FILE RENAMING FOR APPS SCRIPT
-============================================================
-
-The deliverables are intentionally exported as .txt.
-
-Rename/copy as follows when installing:
-
-Code.gs.txt
-→ Code.gs
-
-Index.html.txt
-→ Index.html
-
-appsscript.json.txt
-→ appsscript.json
-
-README_SETUP.txt
-→ keep as documentation
-
-
-Source mirror managed by GitScript.
+Before publishing a release, verify at minimum:
+
+- [ ] Core calculations or map interactions work on desktop, tablet, and phone.
+- [ ] Required, Optional, Advanced, and Assumption inputs are clearly identified where applicable.
+- [ ] Units are always visible and conversions are consistent.
+- [ ] Invalid values produce a clear explanation and a corrective action.
+- [ ] Calculation details/formulas are available where the tool performs calculations.
+- [ ] `.ra` Save Project creates a valid project file.
+- [ ] A saved `.ra` file can be opened after Clear Session and restores editable state.
+- [ ] Wrong-tool, corrupt, or unsupported `.ra` files fail safely.
+- [ ] Derived results are recalculated after a project is reopened.
+- [ ] Refresh recovery works through `sessionStorage` without implying permanent saving.
+- [ ] Clear Session does not delete local `.ra` or report exports.
+- [ ] Print/PDF output is readable and includes key assumptions/results.
+- [ ] CSV output opens cleanly in standard spreadsheet software when CSV is supported.
+- [ ] Copy Summary produces concise, useful plain text.
+- [ ] Email sharing works without exposing server-side credentials.
+- [ ] No private credential appears in page source, browser storage, `.ra` files, exports, or logs.
+- [ ] Mobile controls meet practical touch-target and field-use requirements.
+
+
+## Development principles
+
+When extending this repository:
+
+1. Keep the tool focused on its core ranch job.
+2. Preserve the no-account, standalone architecture unless an approved RanchAssist source-of-truth explicitly changes it.
+3. Keep project persistence user-controlled through `.ra` files rather than adding silent cloud or long-term browser storage.
+4. Keep deployment configuration separate from user project state.
+5. Never serialize secrets or executable code into `.ra` files.
+6. Use an explicit allowlist when exposing browser-safe runtime configuration.
+7. Keep calculations auditable and assumptions editable.
+8. Recalculate derived values after restoring saved projects.
+9. Design mobile behavior intentionally rather than shrinking desktop layouts.
+10. Update this README whenever major capabilities, configuration requirements, project-state schema, or public URLs change.
+
+## RanchAssist ecosystem
+
+- [View Ranch Tools](https://ranchassist.com/tools) — **RanchAssist.com**
+- [UnScriptly](https://unscriptly.com/)
+- [Designed and developed by Mark Allan](https://bymarkallan.com/)
+- [A Mahtco company](https://mahtco.com/)
+- [Designed in Plano, TX by Qalori ❤️](https://qalori.com/)
+
+---
+
+**RanchAssist™** builds focused calculators, estimators, planners, and mapping utilities for practical ranch work. Results produced by RanchAssist are planning outputs based on user-entered information and assumptions; they are not guarantees or professional certifications.
+
